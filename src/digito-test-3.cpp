@@ -358,9 +358,9 @@ void loop()
     // verifico internet:
     if (WiFi.status() != WL_CONNECTED)
     {
-      connectToWiFi();               // Agregar conexión WiFi
-      syncTimeWithNTP();             // Sincronización NTP
-      showClockError = !isTimeSet(); // si no esta en hora todos los leds quedaran rojos!!!
+      connectToWiFi();   // Agregar conexión WiFi
+      syncTimeWithNTP(); // Sincronización NTP
     }
+    showClockError = !isTimeSet(); // si no esta en hora todos los leds quedaran rojos!!!
   }
 }
