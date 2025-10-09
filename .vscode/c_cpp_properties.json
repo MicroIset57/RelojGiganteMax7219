@@ -9,10 +9,9 @@
             "name": "PlatformIO",
             "includePath": [
                 "C:/Users/javie/OneDrive/Documentos/Proyectos/Iset57/RelojGiganteMax7219/src",
-                "C:/Users/javie/OneDrive/Documentos/Proyectos/Iset57/RelojGiganteMax7219/.pio/libdeps/esp32doit-devkit-v1/FastLED/src",
+                "C:/Users/javie/OneDrive/Documentos/Proyectos/Iset57/RelojGiganteMax7219/lib/FastLED",
                 "C:/Users/javie/.platformio/packages/framework-arduinoespressif32@src-142c2bba67849e754b26dbd2468fafc2/libraries/SD/src",
                 "C:/Users/javie/.platformio/packages/framework-arduinoespressif32@src-142c2bba67849e754b26dbd2468fafc2/libraries/FS/src",
-                "C:/Users/javie/OneDrive/Documentos/Proyectos/Iset57/RelojGiganteMax7219/.pio/libdeps/esp32doit-devkit-v1/MD_MAX72XX/src",
                 "C:/Users/javie/.platformio/packages/framework-arduinoespressif32@src-142c2bba67849e754b26dbd2468fafc2/libraries/SPI/src",
                 "C:/Users/javie/.platformio/packages/framework-arduinoespressif32-libs/esp32/include/newlib/platform_include",
                 "C:/Users/javie/.platformio/packages/framework-arduinoespressif32-libs/esp32/include/freertos/FreeRTOS-Kernel/include",
@@ -300,10 +299,9 @@
                 "limitSymbolsToIncludedHeaders": true,
                 "path": [
                     "C:/Users/javie/OneDrive/Documentos/Proyectos/Iset57/RelojGiganteMax7219/src",
-                    "C:/Users/javie/OneDrive/Documentos/Proyectos/Iset57/RelojGiganteMax7219/.pio/libdeps/esp32doit-devkit-v1/FastLED/src",
+                    "C:/Users/javie/OneDrive/Documentos/Proyectos/Iset57/RelojGiganteMax7219/lib/FastLED",
                     "C:/Users/javie/.platformio/packages/framework-arduinoespressif32@src-142c2bba67849e754b26dbd2468fafc2/libraries/SD/src",
                     "C:/Users/javie/.platformio/packages/framework-arduinoespressif32@src-142c2bba67849e754b26dbd2468fafc2/libraries/FS/src",
-                    "C:/Users/javie/OneDrive/Documentos/Proyectos/Iset57/RelojGiganteMax7219/.pio/libdeps/esp32doit-devkit-v1/MD_MAX72XX/src",
                     "C:/Users/javie/.platformio/packages/framework-arduinoespressif32@src-142c2bba67849e754b26dbd2468fafc2/libraries/SPI/src",
                     "C:/Users/javie/.platformio/packages/framework-arduinoespressif32-libs/esp32/include/newlib/platform_include",
                     "C:/Users/javie/.platformio/packages/framework-arduinoespressif32-libs/esp32/include/freertos/FreeRTOS-Kernel/include",
