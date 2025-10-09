@@ -4,10 +4,12 @@
   Javier.
   septiembre 2025
 */
-#include <MD_MAX72xx.h>
+#include "MD_MAX72xx/MD_MAX72xx.h"
 #include <SPI.h>
 // Control de tiras WS2812B
 #include <FastLED.h>
+#include <WiFi.h>
+#include <time.h>
 
 #define NUM_LEDS 7
 #define LED_PIN 15 // GPIO15
@@ -35,6 +37,16 @@ const uint32_t RAINBOW_INTERVAL_MS = 80; // velocidad del desplazamiento
   rows = DIG0,DIG1,DIG2,DIG3,DIG4 (5 rows)
 */
 
+// --- WiFi / NTP config (modifica aquí con tus credenciales y zona horaria) ---
+#define WIFI_SSID "ISET57CLARO"
+#define WIFI_PASS "GONZALO1981"
+
+// Offset en segundos respecto a UTC (ejemplo Argentina: -3h -> -10800)
+#define GMT_OFFSET_SEC (-3 * 3600)
+#define DAYLIGHT_OFFSET_SEC 0
+#define NTP_SERVER_1 "pool.ntp.org"
+#define NTP_SERVER_2 "time.nist.gov"
+
 // para PAROLA_HW
 #define SEGA 1
 #define SEGB 2
@@ -61,6 +73,63 @@ const uint32_t RAINBOW_INTERVAL_MS = 80; // velocidad del desplazamiento
 #define CS_PIN 5    // or SS
 
 MD_MAX72XX mx = MD_MAX72XX(HARDWARE_TYPE, CS_PIN, MAX_DEVICES); // SPI hardware interface
+
+// ---------- WiFi / NTP ----------
+void connectToWiFi(unsigned long timeoutMs = 15000)
+{
+  Serial.printf("Conectando a WiFi '%s'...\n", WIFI_SSID);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+
+  unsigned long start = millis();
+  while (WiFi.status() != WL_CONNECTED && (millis() - start) < timeoutMs)
+  {
+    Serial.print('.');
+    delay(500);
+  }
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    Serial.println();
+    Serial.print("WiFi conectado, IP: ");
+    Serial.println(WiFi.localIP());
+  }
+  else
+  {
+    Serial.println();
+    Serial.println("No se pudo conectar a WiFi (timeout)");
+  }
+}
+
+void syncTimeWithNTP(unsigned long timeoutMs = 15000)
+{
+  Serial.println("Iniciando sync NTP...");
+  configTime(GMT_OFFSET_SEC, DAYLIGHT_OFFSET_SEC, NTP_SERVER_1, NTP_SERVER_2);
+  unsigned long start = millis();
+  time_t now;
+  while ((millis() - start) < timeoutMs)
+  {
+    now = time(nullptr);
+    if (now > 100000)
+    {
+      struct tm timeinfo;
+      localtime_r(&now, &timeinfo);
+      char buf[64];
+      strftime(buf, sizeof(buf), "%c", &timeinfo);
+      Serial.print("Hora sincronizada: ");
+      Serial.println(buf);
+      return;
+    }
+    delay(200);
+  }
+  Serial.println("No se pudo sincronizar la hora (timeout)");
+}
+
+bool isTimeSet()
+{
+  time_t now;
+  time(&now);
+  return (now > 1759968000); // verifico si es mayor a 9/10/2025
+}
 
 void resetMax(void)
 {
@@ -138,18 +207,14 @@ void setNumero(int digito, int num)
 
 void setHora(int hr)
 {
-  int dig1 = hr / 10;
-  int dig0 = hr % 10;
-  setNumero(DIG0, dig0);
-  setNumero(DIG1, dig1);
+  setNumero(DIG0, hr / 10);
+  setNumero(DIG1, hr % 10);
 }
 
 void setMinuto(int min)
 {
-  int dig1 = min / 10;
-  int dig0 = min % 10;
-  setNumero(DIG2, dig0);
-  setNumero(DIG3, dig1);
+  setNumero(DIG2, min / 10);
+  setNumero(DIG3, min % 10);
 }
 
 // leds de los puntos entre hora y minuto: [DIG4,A]
@@ -205,8 +270,21 @@ void setup()
   mx.begin();
   resetMax();
   Serial.println("Reloj Gigante ISET 57");
+
   // Inicializa los WS2812B
   FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS);
+
+  connectToWiFi();   // Agregar conexión WiFi
+  syncTimeWithNTP(); // Sincronización NTP
+}
+
+void showRedLeds()
+{
+  for (int i = 0; i < NUM_LEDS; ++i)
+  {
+    leds[i] = CRGB::Red;
+  }
+  FastLED.show();
 }
 
 // Actualiza el arreglo de LEDs con un arcoiris que se desplaza hacia la derecha.
@@ -247,10 +325,13 @@ void updateIset57()
 void loop()
 {
   static bool showRainbow = false;
+  static bool showClockError = false;
   // Actualiza arcoiris (si está activado). updateRainbow() es no bloqueante.
   EVERY_N_MILLIS(RAINBOW_INTERVAL_MS)
   {
-    if (showRainbow)
+    if (showClockError)
+      showRedLeds();
+    else if (showRainbow)
       updateRainbow();
     else
       updateIset57();
@@ -272,6 +353,14 @@ void loop()
     if (!showRainbow)
     {
       setDias(timeinfo.tm_wday); // enciende el dia de la semana
+    }
+
+    // verifico internet:
+    if (WiFi.status() != WL_CONNECTED)
+    {
+      connectToWiFi();               // Agregar conexión WiFi
+      syncTimeWithNTP();             // Sincronización NTP
+      showClockError = !isTimeSet(); // si no esta en hora todos los leds quedaran rojos!!!
     }
   }
 }
