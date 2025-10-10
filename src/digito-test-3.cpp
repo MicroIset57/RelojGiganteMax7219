@@ -5,18 +5,9 @@
   septiembre 2025
 */
 #include "MD_MAX72xx/MD_MAX72xx.h"
-#include <SPI.h>
-// Control de tiras WS2812B
-#include <FastLED.h>
 #include <WiFi.h>
 #include <time.h>
-
-#define NUM_LEDS 7
-#define LED_PIN 15 // GPIO15
-CRGB leds[NUM_LEDS];
-
-// Parámetros del arcoiris
-const uint32_t RAINBOW_INTERVAL_MS = 80; // velocidad del desplazamiento
+#include "Leds.h"
 
 /*
   4 Displays de 7 segmentos
@@ -60,10 +51,6 @@ const uint32_t RAINBOW_INTERVAL_MS = 80; // velocidad del desplazamiento
 #define DIG2 2
 #define DIG3 3
 #define DIG4 4
-// donde comienza el led del ISET 57 y donde termina:
-
-#define ISET57_BEGIN 5
-#define ISET57_END 6
 
 // https://arduinoplusplus.wordpress.com/2017/04/14/parola-a-to-z-adapting-for-different-hardware/
 #define HARDWARE_TYPE MD_MAX72XX::PAROLA_HW // PAROLA_HW // GENERIC_HW
@@ -81,9 +68,11 @@ void connectToWiFi(unsigned long timeoutMs = 15000)
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
 
+  int x = 0;
   unsigned long start = millis();
   while (WiFi.status() != WL_CONNECTED && (millis() - start) < timeoutMs)
   {
+    FastLED.showColor(((++x % 2) == 0) ? CRGB::Magenta3 : CRGB::Black);
     Serial.print('.');
     delay(500);
   }
@@ -97,6 +86,8 @@ void connectToWiFi(unsigned long timeoutMs = 15000)
   {
     Serial.println();
     Serial.println("No se pudo conectar a WiFi (timeout)");
+    FastLED.showColor(CRGB::Red);
+    delay(1000);
   }
 }
 
@@ -106,8 +97,10 @@ void syncTimeWithNTP(unsigned long timeoutMs = 15000)
   configTime(GMT_OFFSET_SEC, DAYLIGHT_OFFSET_SEC, NTP_SERVER_1, NTP_SERVER_2);
   unsigned long start = millis();
   time_t now;
+  int x = 0;
   while ((millis() - start) < timeoutMs)
   {
+    FastLED.showColor(((++x % 2) == 0) ? CRGB::Cyan3 : CRGB::Black);
     now = time(nullptr);
     if (now > 100000)
     {
@@ -122,6 +115,8 @@ void syncTimeWithNTP(unsigned long timeoutMs = 15000)
     delay(200);
   }
   Serial.println("No se pudo sincronizar la hora (timeout)");
+  FastLED.showColor(CRGB::Red);
+  delay(1000);
 }
 
 bool isTimeSet()
@@ -230,38 +225,33 @@ void setPuntos()
 void setDias(int dia)
 {
   // primero apago todos los leds:
-  for (int i = 0; i < NUM_LEDS; ++i)
-  {
-    leds[i] = CRGB::Black;
-  }
+  AllLeds(CRGB::Black);
 
   // enciendo solo ese dia.
   if (dia == 1) // lunes
   {
-    leds[0] = CRGB::Red;
+    SetLed(0, CRGB::Red);
   }
   else if (dia == 2) // martes
   {
-    leds[1] = CRGB::Red;
+    SetLed(1, CRGB::Red);
   }
   else if (dia == 3) // miércoles
   {
-    leds[2] = CRGB::Red;
+    SetLed(2, CRGB::Red);
   }
   else if (dia == 4) // jueves
   {
-    leds[3] = CRGB::Red;
+    SetLed(3, CRGB::Red);
   }
   else if (dia == 5) // viernes
   {
-    leds[4] = CRGB::Red;
+    SetLed(4, CRGB::Red);
   }
   else
   {
-    // sábado y domingo se queda boludeando....
-    // ARCOIRIS:
+    // sábado y domingo no hace nada...
   }
-  FastLED.show();
 }
 
 void setup()
@@ -272,69 +262,28 @@ void setup()
   Serial.println("Reloj Gigante ISET 57");
 
   // Inicializa los WS2812B
-  FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS);
+  LedsInit();
+  // FastLED.setBrightness(30);
+  LedsKitt(CRGB::Red);
 
   connectToWiFi();   // Agregar conexión WiFi
   syncTimeWithNTP(); // Sincronización NTP
 }
 
-void showRedLeds()
-{
-  for (int i = 0; i < NUM_LEDS; ++i)
-  {
-    leds[i] = CRGB::Red;
-  }
-  FastLED.show();
-}
-
-// Actualiza el arreglo de LEDs con un arcoiris que se desplaza hacia la derecha.
-void updateRainbow()
-{
-  static uint8_t startHue = 0;
-  // Usamos fill_rainbow para rellenar desde startHue.
-  // Luego desplazamos hacia la derecha una posición para dar la sensación de movimiento.
-  startHue += 4; // velocidad de cambio de color base
-  fill_rainbow(leds, NUM_LEDS, startHue, 8);
-  // Para que parezca que se mueve hacia la derecha, rotamos el array una posición a la right
-  CRGB lastColor = leds[NUM_LEDS - 1];
-  for (int i = NUM_LEDS - 1; i > 0; --i)
-    leds[i] = leds[i - 1];
-  leds[0] = lastColor;
-  FastLED.show();
-}
-
-void updateIset57()
-{
-  static int c = -1;
-  c++;
-
-  if (c == 0)
-  {
-    fill_gradient_RGB(leds, ISET57_BEGIN, CRGB::Blue, ISET57_END, CRGB::Blue4);
-  }
-  else if (c < 100)
-  {
-    fadeToBlackBy(leds, ISET57_END - ISET57_BEGIN + 1, 10);
-  }
-  else
-  {
-    c = 0;
-  }
-}
-
 void loop()
 {
-  static bool showRainbow = false;
-  static bool showClockError = false;
-  // Actualiza arcoiris (si está activado). updateRainbow() es no bloqueante.
-  EVERY_N_MILLIS(RAINBOW_INTERVAL_MS)
+  static bool sabadomingo = false;
+  static bool clockError = false;
+
+  // Actualiza los leds (no son bloqueantes)
+  EVERY_N_MILLIS(80)
   {
-    if (showClockError)
-      showRedLeds();
-    else if (showRainbow)
-      updateRainbow();
+    if (clockError)
+      LedFlash(CRGB::Red4); // muestro error
+    else if (sabadomingo)
+      updateRainbow(); // colores en todos los leds, dias de semana y ISET 57.
     else
-      updateIset57();
+      NextLed(ISET57_BEGIN, ISET57_END, CRGB::Blue1);
   }
 
   EVERY_N_MILLIS(500)
@@ -349,8 +298,8 @@ void loop()
     setMinuto(timeinfo.tm_min);
 
     // Solo mostrar el arcoiris sabados y domingos:
-    showRainbow = (timeinfo.tm_wday == 0 || timeinfo.tm_wday == 6);
-    if (!showRainbow)
+    sabadomingo = (timeinfo.tm_wday == 0 || timeinfo.tm_wday == 6);
+    if (!sabadomingo)
     {
       setDias(timeinfo.tm_wday); // enciende el dia de la semana
     }
@@ -358,9 +307,15 @@ void loop()
     // verifico internet:
     if (WiFi.status() != WL_CONNECTED)
     {
-      connectToWiFi();   // Agregar conexión WiFi
+      Serial.println("Se perdió la conexión WiFi. Reintentando...");
+      connectToWiFi();   // conexión WiFi
       syncTimeWithNTP(); // Sincronización NTP
     }
-    showClockError = !isTimeSet(); // si no esta en hora todos los leds quedaran rojos!!!
+    else if (clockError)
+    {
+      Serial.println("Se perdió la hora. Reintentando...");
+      WiFi.disconnect();
+    }
+    clockError = !isTimeSet(); // si no esta en hora todos los leds quedaran rojos!!!
   }
 }
