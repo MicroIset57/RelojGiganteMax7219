@@ -32,24 +32,40 @@ void ShiftLed(CRGB col, uint8_t brillo /*255 default*/)
 void NextLed(int desde, int hasta, CRGB col, bool dejarCola /*= true*/)
 {
     static int led = desde;
-    static bool sentido = true;
+    static bool sentidoDerecho = true;
     if (!dejarCola)
         leds[led] = CRGB::Black;
 
-    if (sentido)
+    // Serial.print("LED ");
+    // Serial.print(led);
+    // Serial.print(" APAGADO ");
+
+    if (sentidoDerecho)
     {
         if (++led == hasta)
-            sentido = false;
+        {
+            sentidoDerecho = false;
+            led--; // me pase 1, vuelvo.
+        }
     }
     else
     {
         if (--led == desde)
-            sentido = true;
+        {
+            sentidoDerecho = true;
+            led++; // me pase 1, vuelvo.
+        }
     }
 
     if (dejarCola)
         fadeToBlackBy(leds + desde, hasta - desde, 120);
+
     leds[led] = col;
+
+    // Serial.print(" -  LED ");
+    // Serial.print(led);
+    // Serial.println(" ENCENDIDO ");
+
     FastLED.show();
 }
 
@@ -70,6 +86,13 @@ void AllLeds(CRGB col, uint8_t brillo)
     FastLED.show();
 }
 
+void AllLeds(CRGB col, int ini, int fin)
+{
+    for (int i = ini; i <= fin; i++)
+        leds[i] = col;
+    FastLED.show();
+}
+
 void LedFlash(CRGB col)
 {
     FastLED.setBrightness(255);
@@ -80,25 +103,39 @@ void LedFlash(CRGB col)
     FastLED.show();
 }
 
+void Cocoon(CRGB col)
+{
+    static uint8_t fade = 0;
+    static int direccion = 2;
+    EVERY_N_MILLIS(25)
+    {
+        AllLeds(col, fade += direccion);
+        if (fade < 2)
+            direccion = 2;
+        if (fade > 253)
+            direccion = -2;
+    }
+}
+
 // "Knight Industries Two Thousand"
-void LedsKitt(CRGB color)
+void LedsKitt(CRGB color, int ini, int end)
 {
     AllLeds(CRGB::Black);
-    for (int i = 0; i < NUM_LEDS + 2; ++i)
+    for (int i = ini; i < end + 2; ++i)
     {
-        if (i < NUM_LEDS)
+        if (i < end)
             leds[i] = color;
-        fadeToBlackBy(leds, NUM_LEDS, 70);
+        fadeToBlackBy(leds, end, 70);
         FastLED.show();
-        FastLED.delay(55);
+        FastLED.delay(33);
     }
-    for (int i = 0; i < NUM_LEDS * 2; ++i)
+    for (int i = ini; i < end * 2; ++i)
     {
-        if (i < NUM_LEDS)
-            leds[NUM_LEDS - 1 - i] = color;
-        fadeToBlackBy(leds, NUM_LEDS, 70);
+        if (i < end)
+            leds[end - 1 - i] = color;
+        fadeToBlackBy(leds, end, 70);
         FastLED.show();
-        FastLED.delay(55);
+        FastLED.delay(33);
     }
 }
 

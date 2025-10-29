@@ -45,5 +45,5 @@
 *.tar.gz
 *.tar
 
-.pio
-.vscode
+.pio/
+.vscode/
