@@ -13,7 +13,7 @@
 /*
   4 Displays de 7 segmentos
 
-                A              A        A        A              A
+                A              A        P        A              A
             +-------+      +-------+         +-------+      +-------+
             |       |      |       |         |       |      |       |
            F|   G   |B    F|   G   |B   O    F|   G   |B    F|   G   |B
@@ -22,28 +22,29 @@
            E|   D   |C    E|   D   |C   |   E|   D   |C    E|   D   |C
             +-------+      +-------+    |    +-------+      +-------+
                 |              |        |        |              |
-               DIG0           DIG1     DIG4     DIG2           DIG3
+               DIG0           DIG1     DIG3     DIG2           DIG3
+                                        +-----------------------+
 
   setPoint(row, col)
-  cols = A,B,C,D,E,F,G  (7 cols)
-  rows = DIG0,DIG1,DIG2,DIG3,DIG4 (5 rows)
+  cols = A,B,C,D,E,F,G,DP  (8 cols)
+  rows = DIG0,DIG1,DIG2,DIG3 (4 rows)
 */
 
 // Las configuraciones se han movido a config.h
 
 // para PAROLA_HW
-#define SEGA 1
-#define SEGB 2
-#define SEGC 3
-#define SEGD 4
-#define SEGE 5
-#define SEGF 6
+#define SEGA 4
+#define SEGB 3
+#define SEGC 2
+#define SEGD 1
+#define SEGE 6
+#define SEGF 5
 #define SEGG 7
-#define DIG0 0
-#define DIG1 1
-#define DIG2 2
-#define DIG3 3
-#define DIG4 4
+#define SEGDP 0 // DP (Decimal Poinnt)
+#define DIG0 3
+#define DIG1 2
+#define DIG2 1
+#define DIG3 0
 
 // https://arduinoplusplus.wordpress.com/2017/04/14/parola-a-to-z-adapting-for-different-hardware/
 #define HARDWARE_TYPE MD_MAX72XX::PAROLA_HW // PAROLA_HW // GENERIC_HW
@@ -54,78 +55,112 @@
 
 MD_MAX72XX mx = MD_MAX72XX(HARDWARE_TYPE, CS_PIN, MAX_DEVICES); // SPI hardware interface
 
-void resetMax(void)
-{
-  mx.control(MD_MAX72XX::INTENSITY, MAX_INTENSITY / 3);
-  mx.control(MD_MAX72XX::UPDATE, MD_MAX72XX::ON);
-  mx.clear();
-}
-
 // Enciende un digito con el numero indicado.
 void setNumero(int digito, int num)
 {
-  mx.control(MD_MAX72XX::UPDATE, MD_MAX72XX::OFF);
-  mx.setPoint(digito, SEGA, true);
-  mx.setPoint(digito, SEGB, true);
-  mx.setPoint(digito, SEGC, true);
-  mx.setPoint(digito, SEGD, true);
-  mx.setPoint(digito, SEGE, true);
-  mx.setPoint(digito, SEGF, true);
-  mx.setPoint(digito, SEGG, true);
+  mx.clear(); // apago todo
 
   if (num == 0)
   {
-    mx.setPoint(digito, SEGG, false);
+    mx.setPoint(digito, SEGA, true);
+    mx.setPoint(digito, SEGB, true);
+    mx.setPoint(digito, SEGC, true);
+    mx.setPoint(digito, SEGD, true);
+    mx.setPoint(digito, SEGE, true);
+    mx.setPoint(digito, SEGF, true);
+    // mx.setPoint(digito, SEGG, false);
   }
   else if (num == 1)
   {
-    mx.setPoint(digito, SEGA, false);
-    mx.setPoint(digito, SEGD, false);
-    mx.setPoint(digito, SEGE, false);
-    mx.setPoint(digito, SEGF, false);
-    mx.setPoint(digito, SEGG, false);
+    // mx.setPoint(digito, SEGA, false);
+    mx.setPoint(digito, SEGB, true);
+    mx.setPoint(digito, SEGC, true);
+    // mx.setPoint(digito, SEGD, false);
+    // mx.setPoint(digito, SEGE, false);
+    // mx.setPoint(digito, SEGF, false);
+    // mx.setPoint(digito, SEGG, false);
   }
   else if (num == 2)
   {
-    mx.setPoint(digito, SEGC, false);
-    mx.setPoint(digito, SEGF, false);
+    mx.setPoint(digito, SEGA, true);
+    mx.setPoint(digito, SEGB, true);
+    // mx.setPoint(digito, SEGC, false);
+    mx.setPoint(digito, SEGD, true);
+    mx.setPoint(digito, SEGE, true);
+    // mx.setPoint(digito, SEGF, false);
+    mx.setPoint(digito, SEGG, true);
   }
   else if (num == 3)
   {
-    mx.setPoint(digito, SEGE, false);
-    mx.setPoint(digito, SEGF, false);
+    mx.setPoint(digito, SEGA, true);
+    mx.setPoint(digito, SEGB, true);
+    mx.setPoint(digito, SEGC, true);
+    mx.setPoint(digito, SEGD, true);
+    // mx.setPoint(digito, SEGE, false);
+    // mx.setPoint(digito, SEGF, false);
+    mx.setPoint(digito, SEGG, true);
   }
   else if (num == 4)
   {
-    mx.setPoint(digito, SEGA, false);
-    mx.setPoint(digito, SEGD, false);
-    mx.setPoint(digito, SEGE, false);
+    // mx.setPoint(digito, SEGA, false);
+    mx.setPoint(digito, SEGB, true);
+    mx.setPoint(digito, SEGC, true);
+    // mx.setPoint(digito, SEGD, false);
+    // mx.setPoint(digito, SEGE, false);
+    mx.setPoint(digito, SEGF, true);
+    mx.setPoint(digito, SEGG, true);
   }
   else if (num == 5)
   {
-    mx.setPoint(digito, SEGB, false);
-    mx.setPoint(digito, SEGE, false);
+    mx.setPoint(digito, SEGA, true);
+    // mx.setPoint(digito, SEGB, false);
+    mx.setPoint(digito, SEGC, true);
+    mx.setPoint(digito, SEGD, true);
+    // mx.setPoint(digito, SEGE, false);
+    mx.setPoint(digito, SEGF, true);
+    mx.setPoint(digito, SEGG, true);
   }
   else if (num == 6)
   {
-    mx.setPoint(digito, SEGB, false);
+    mx.setPoint(digito, SEGA, true);
+    // mx.setPoint(digito, SEGB, false);
+    mx.setPoint(digito, SEGC, true);
+    mx.setPoint(digito, SEGD, true);
+    mx.setPoint(digito, SEGE, true);
+    mx.setPoint(digito, SEGF, true);
+    mx.setPoint(digito, SEGG, true);
   }
   else if (num == 7)
   {
-    mx.setPoint(digito, SEGD, false);
-    mx.setPoint(digito, SEGE, false);
-    mx.setPoint(digito, SEGF, false);
-    mx.setPoint(digito, SEGG, false);
+    mx.setPoint(digito, SEGA, true);
+    mx.setPoint(digito, SEGB, true);
+    mx.setPoint(digito, SEGC, true);
+    // mx.setPoint(digito, SEGD, false);
+    // mx.setPoint(digito, SEGE, false);
+    // mx.setPoint(digito, SEGF, false);
+    // mx.setPoint(digito, SEGG, false);
   }
   else if (num == 8)
   {
     // ya esta encendido todo
+    mx.setPoint(digito, SEGA, true);
+    mx.setPoint(digito, SEGB, true);
+    mx.setPoint(digito, SEGC, true);
+    mx.setPoint(digito, SEGD, true);
+    mx.setPoint(digito, SEGE, true);
+    mx.setPoint(digito, SEGF, true);
+    mx.setPoint(digito, SEGG, true);
   }
   else if (num == 9)
   {
-    mx.setPoint(digito, SEGE, false);
+    mx.setPoint(digito, SEGA, true);
+    mx.setPoint(digito, SEGB, true);
+    mx.setPoint(digito, SEGC, true);
+    mx.setPoint(digito, SEGD, true);
+    // mx.setPoint(digito, SEGE, false);
+    mx.setPoint(digito, SEGF, true);
+    mx.setPoint(digito, SEGG, true);
   }
-  mx.control(MD_MAX72XX::UPDATE, MD_MAX72XX::ON);
 }
 
 void setHora(int hr)
@@ -140,12 +175,13 @@ void setMinuto(int min)
   setNumero(DIG3, min % 10);
 }
 
-// leds de los puntos entre hora y minuto: [DIG4,A]
+// leds de los puntos entre hora y minuto: [DIG2,DP]
 void setPuntos()
 {
-  static bool estado = true;
-  estado = !estado;
-  mx.setPoint(DIG4, SEGA, estado);
+  static uint8_t estado = 0;
+  mx.setPoint(DIG2, SEGDP, ((++estado % 2) == 0));
+  // Serial.print("Puntos ");
+  // Serial.println(estado % 2);
 }
 
 // leds[0] = domingo ... leds[6] = sábado
@@ -187,8 +223,11 @@ void setDias(int dia)
 void setup()
 {
   Serial.begin(115200);
+
   mx.begin();
-  resetMax();
+  mx.clear();
+  mx.control(MD_MAX72XX::INTENSITY, MAX_INTENSITY);
+
   Serial.println("RESET!\n**Reloj Gigante ISET 57**\ninicializando...");
 
   // Inicializa los WS2812B

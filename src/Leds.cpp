@@ -42,7 +42,7 @@ void NextLed(int desde, int hasta, CRGB col, bool dejarCola /*= true*/)
 
     if (sentidoDerecho)
     {
-        if (++led == hasta)
+        if (++led > hasta)
         {
             sentidoDerecho = false;
             led--; // me pase 1, vuelvo.
@@ -50,7 +50,7 @@ void NextLed(int desde, int hasta, CRGB col, bool dejarCola /*= true*/)
     }
     else
     {
-        if (--led == desde)
+        if (--led < desde)
         {
             sentidoDerecho = true;
             led++; // me pase 1, vuelvo.
