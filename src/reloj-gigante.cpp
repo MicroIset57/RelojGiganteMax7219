@@ -40,11 +40,12 @@
 #define SEGE 6
 #define SEGF 5
 #define SEGG 7
-#define SEGDP 0 // DP (Decimal Poinnt)
+// #define SEGDP 0 // DP (Decimal Point)
 #define DIG0 3
 #define DIG1 2
 #define DIG2 1
 #define DIG3 0
+#define DIG4 4
 
 // https://arduinoplusplus.wordpress.com/2017/04/14/parola-a-to-z-adapting-for-different-hardware/
 #define HARDWARE_TYPE MD_MAX72XX::PAROLA_HW // PAROLA_HW // GENERIC_HW
@@ -58,7 +59,7 @@ MD_MAX72XX mx = MD_MAX72XX(HARDWARE_TYPE, CS_PIN, MAX_DEVICES); // SPI hardware 
 // Enciende un digito con el numero indicado.
 void setNumero(int digito, int num)
 {
-  mx.clear(); // apago todo
+  // mx.clear();
 
   if (num == 0)
   {
@@ -68,26 +69,26 @@ void setNumero(int digito, int num)
     mx.setPoint(digito, SEGD, true);
     mx.setPoint(digito, SEGE, true);
     mx.setPoint(digito, SEGF, true);
-    // mx.setPoint(digito, SEGG, false);
+    mx.setPoint(digito, SEGG, false);
   }
   else if (num == 1)
   {
     // mx.setPoint(digito, SEGA, false);
     mx.setPoint(digito, SEGB, true);
     mx.setPoint(digito, SEGC, true);
-    // mx.setPoint(digito, SEGD, false);
-    // mx.setPoint(digito, SEGE, false);
-    // mx.setPoint(digito, SEGF, false);
-    // mx.setPoint(digito, SEGG, false);
+    mx.setPoint(digito, SEGD, false);
+    mx.setPoint(digito, SEGE, false);
+    mx.setPoint(digito, SEGF, false);
+    mx.setPoint(digito, SEGG, false);
   }
   else if (num == 2)
   {
     mx.setPoint(digito, SEGA, true);
     mx.setPoint(digito, SEGB, true);
-    // mx.setPoint(digito, SEGC, false);
+    mx.setPoint(digito, SEGC, false);
     mx.setPoint(digito, SEGD, true);
     mx.setPoint(digito, SEGE, true);
-    // mx.setPoint(digito, SEGF, false);
+    mx.setPoint(digito, SEGF, false);
     mx.setPoint(digito, SEGG, true);
   }
   else if (num == 3)
@@ -96,34 +97,34 @@ void setNumero(int digito, int num)
     mx.setPoint(digito, SEGB, true);
     mx.setPoint(digito, SEGC, true);
     mx.setPoint(digito, SEGD, true);
-    // mx.setPoint(digito, SEGE, false);
-    // mx.setPoint(digito, SEGF, false);
+    mx.setPoint(digito, SEGE, false);
+    mx.setPoint(digito, SEGF, false);
     mx.setPoint(digito, SEGG, true);
   }
   else if (num == 4)
   {
-    // mx.setPoint(digito, SEGA, false);
+    mx.setPoint(digito, SEGA, false);
     mx.setPoint(digito, SEGB, true);
     mx.setPoint(digito, SEGC, true);
-    // mx.setPoint(digito, SEGD, false);
-    // mx.setPoint(digito, SEGE, false);
+    mx.setPoint(digito, SEGD, false);
+    mx.setPoint(digito, SEGE, false);
     mx.setPoint(digito, SEGF, true);
     mx.setPoint(digito, SEGG, true);
   }
   else if (num == 5)
   {
     mx.setPoint(digito, SEGA, true);
-    // mx.setPoint(digito, SEGB, false);
+    mx.setPoint(digito, SEGB, false);
     mx.setPoint(digito, SEGC, true);
     mx.setPoint(digito, SEGD, true);
-    // mx.setPoint(digito, SEGE, false);
+    mx.setPoint(digito, SEGE, false);
     mx.setPoint(digito, SEGF, true);
     mx.setPoint(digito, SEGG, true);
   }
   else if (num == 6)
   {
     mx.setPoint(digito, SEGA, true);
-    // mx.setPoint(digito, SEGB, false);
+    mx.setPoint(digito, SEGB, false);
     mx.setPoint(digito, SEGC, true);
     mx.setPoint(digito, SEGD, true);
     mx.setPoint(digito, SEGE, true);
@@ -135,10 +136,10 @@ void setNumero(int digito, int num)
     mx.setPoint(digito, SEGA, true);
     mx.setPoint(digito, SEGB, true);
     mx.setPoint(digito, SEGC, true);
-    // mx.setPoint(digito, SEGD, false);
-    // mx.setPoint(digito, SEGE, false);
-    // mx.setPoint(digito, SEGF, false);
-    // mx.setPoint(digito, SEGG, false);
+    mx.setPoint(digito, SEGD, false);
+    mx.setPoint(digito, SEGE, false);
+    mx.setPoint(digito, SEGF, false);
+    mx.setPoint(digito, SEGG, false);
   }
   else if (num == 8)
   {
@@ -157,7 +158,7 @@ void setNumero(int digito, int num)
     mx.setPoint(digito, SEGB, true);
     mx.setPoint(digito, SEGC, true);
     mx.setPoint(digito, SEGD, true);
-    // mx.setPoint(digito, SEGE, false);
+    mx.setPoint(digito, SEGE, false);
     mx.setPoint(digito, SEGF, true);
     mx.setPoint(digito, SEGG, true);
   }
@@ -179,9 +180,8 @@ void setMinuto(int min)
 void setPuntos()
 {
   static uint8_t estado = 0;
-  mx.setPoint(DIG2, SEGDP, ((++estado % 2) == 0));
-  // Serial.print("Puntos ");
-  // Serial.println(estado % 2);
+  // (el SEGD mio es el bit 1 del MAX)
+  mx.setPoint(DIG4, SEGD, ((++estado % 2) == 0));
 }
 
 // leds[0] = domingo ... leds[6] = sábado
@@ -220,24 +220,33 @@ void setDias(int dia)
   // sabados y domingos no enciendo nada
 }
 
-void setup()
+void TestDeMax7219()
 {
-  Serial.begin(115200);
-
-  mx.begin();
+  Serial.println("Test de Leds y puntos del reloj gigante");
+  //  Test de Leds:
+  for (int d = 0; d <= 3; d++)
+  {
+    for (int n = 1; n <= 7; n++)
+    {
+      mx.setPoint(d, n, true);
+      delay(250);
+      mx.setPoint(d, n, false);
+    }
+  }
+  setPuntos();
+  delay(250);
+  setPuntos();
+  delay(250);
+  // Fin Test.
   mx.clear();
-  mx.control(MD_MAX72XX::INTENSITY, MAX_INTENSITY);
+  delay(500);
+}
 
-  Serial.println("RESET!\n**Reloj Gigante ISET 57**\ninicializando...");
+void TestDeRgbLeds()
+{
+  Serial.println("Test de Leds RGB WS2812B");
 
-  // Inicializa los WS2812B
-  LedsInit();
-  // FastLED.setBrightness(30);
   LedsKitt(CRGB::Red, 0, 16);
-
-  // Iniciar servidor y el wifi
-  initWebServer();
-  Serial.println("Servidor web iniciado");
 
   // simulo encendido de dias L-M-M-J-V
   for (int i = 1; i <= 5; i++)
@@ -248,8 +257,32 @@ void setup()
   delay(150);
   AllLeds(CRGB::Black);
   delay(500);
+}
 
-  Serial.println("setup listo.");
+void setup()
+{
+  Serial.begin(115200);
+  delay(222);
+  Serial.println("RESET!\n**Reloj Gigante ISET 57**");
+
+  // inicio MAX7219
+  mx.begin();
+  mx.clear();
+  mx.control(MD_MAX72XX::INTENSITY, MAX_INTENSITY / 2); // set brightness (0 is min, 15 is max)
+
+  // inicio LEDS RGB
+  LedsInit();
+  // FastLED.setBrightness(30);
+  AllLeds(CRGB::Black);
+
+  // tests varios...
+  TestDeMax7219();
+  TestDeRgbLeds();
+
+  // Iniciar servidor y el wifi
+  // initWebServer();
+  // Serial.println("Servidor web iniciado");
+  Serial.println("setup ok");
 }
 
 void loop()
@@ -258,16 +291,11 @@ void loop()
   static bool clockError = false;
   static CHSV randomColor(135, 255, 240);
 
-  // FastLED.setBrightness(30);
-
   // intenta reconectarse cada vez que no este conectado.
   if (WiFi.status() != WL_CONNECTED)
   {
-    wifiConnect(); // intenta durante 10 segs.
-    AllLeds(CRGB::Red);
-    delay(2000);
-    AllLeds(CRGB::Black);
-    return;
+    wifiConnect();
+    // si no se conecta se RESETEA !
   }
 
   // la primera vez y cada 1 hora se sincroniza con el reloj de internet.
@@ -315,6 +343,7 @@ void loop()
 
         // Solo mostrar el arcoiris sabados y domingos:
         sabadomingo = (timeinfo.tm_wday == 0 || timeinfo.tm_wday == 6);
+
         if (!sabadomingo)
         {
           setDias(timeinfo.tm_wday); // enciende el dia de la semana
