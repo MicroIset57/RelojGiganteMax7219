@@ -200,24 +200,37 @@ void setDias(int dia)
   if (dia == 1)
   {
     AllLeds(CRGB::Cyan, 44, 50);
+    Serial.print(" Lunes");
   }
   else if (dia == 2)
   {
     AllLeds(CRGB::Cyan, 38, 43);
+    Serial.print(" Martes");
   }
   else if (dia == 3)
   {
     AllLeds(CRGB::Cyan, 31, 36);
+    Serial.print(" Miercoles");
   }
   else if (dia == 4)
   {
     AllLeds(CRGB::Cyan, 24, 30);
+    Serial.print(" Jueves");
   }
   else if (dia == 5)
   {
     AllLeds(CRGB::Cyan, 18, 23);
+    Serial.print(" Viernes");
   }
   // sabados y domingos no enciendo nada
+  else if (dia == 6)
+  {
+    Serial.print(" Sabado");
+  }
+  else if (dia == 7)
+  {
+    Serial.print(" Domingo");
+  }
 }
 
 void TestDeMax7219()
@@ -333,20 +346,24 @@ void loop()
       if (timeinfo.tm_min != last_min)
       {
         last_min = timeinfo.tm_min;
-        Serial.print("Hora: ");
-        Serial.print(timeinfo.tm_hour);
-        Serial.print(":");
-        Serial.println(timeinfo.tm_min);
-
         setHora(timeinfo.tm_hour);
         setMinuto(timeinfo.tm_min);
 
         // Solo mostrar el arcoiris sabados y domingos:
         sabadomingo = (timeinfo.tm_wday == 0 || timeinfo.tm_wday == 6);
 
+        Serial.print("Hora: ");
+        Serial.print(timeinfo.tm_hour);
+        Serial.print(":");
+        Serial.print(timeinfo.tm_min);
+        Serial.print(", ");
+
+        setDias(timeinfo.tm_wday); // enciende el dia de la semana
+        Serial.println();
+
+        // cada finnde cambio el color (igual nadie lo va a ver...)
         if (!sabadomingo)
         {
-          setDias(timeinfo.tm_wday); // enciende el dia de la semana
           static int lastWday = -1;
           if (timeinfo.tm_wday != lastWday)
           {
