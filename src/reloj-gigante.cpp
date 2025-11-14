@@ -73,7 +73,7 @@ void setNumero(int digito, int num)
   }
   else if (num == 1)
   {
-    // mx.setPoint(digito, SEGA, false);
+    mx.setPoint(digito, SEGA, false);
     mx.setPoint(digito, SEGB, true);
     mx.setPoint(digito, SEGC, true);
     mx.setPoint(digito, SEGD, false);
