@@ -242,17 +242,16 @@ void TestDeMax7219()
     for (int n = 1; n <= 7; n++)
     {
       mx.setPoint(d, n, true);
-      delay(250);
+      delay(150);
       mx.setPoint(d, n, false);
     }
   }
   setPuntos();
-  delay(250);
+  delay(150);
   setPuntos();
-  delay(250);
+  delay(150);
   // Fin Test.
   mx.clear();
-  delay(500);
 }
 
 void TestDeRgbLeds()
@@ -277,11 +276,12 @@ void setup()
   Serial.begin(115200);
   delay(222);
   Serial.println("RESET!\n**Reloj Gigante ISET 57**");
+  Serial.println("Version 2.0 - Portal de Configuración WiFi");
 
   // inicio MAX7219
   mx.begin();
   mx.clear();
-  mx.control(MD_MAX72XX::INTENSITY, MAX_INTENSITY / 2); // set brightness (0 is min, 15 is max)
+  mx.control(MD_MAX72XX::INTENSITY, MAX_INTENSITY); // set brightness (0 is min, 15 is max)
 
   // inicio LEDS RGB
   LedsInit();
@@ -292,10 +292,65 @@ void setup()
   TestDeMax7219();
   TestDeRgbLeds();
 
-  // Iniciar servidor y el wifi
-  // initWebServer();
-  // Serial.println("Servidor web iniciado");
-  Serial.println("setup ok");
+  // ========== NUEVA LÓGICA DE CONFIGURACIÓN WIFI ==========
+  Serial.println("\n=== Verificando configuración WiFi ===");
+
+  // Verificar si hay credenciales guardadas
+  if (!hasStoredCredentials())
+  {
+    Serial.println("Primera vez encendiendo o sin credenciales guardadas");
+    Serial.println("Iniciando portal de configuración WiFi...");
+
+    // Indicador visual: LED azul parpadeando = modo configuración
+    for (int i = 0; i < 3; i++)
+    {
+      AllLeds(CRGB::Blue);
+      delay(200);
+      AllLeds(CRGB::Black);
+      delay(200);
+    }
+
+    startConfigPortal();
+    Serial.println("Portal activo - esperando configuración del usuario");
+    Serial.println("Conectarse a la red WiFi: RelojISet57-Config");
+    Serial.println("Abrir navegador en: http://192.168.4.1");
+    return; // No continuar con el setup normal
+  }
+
+  // Si hay credenciales, intentar conectar
+  Serial.println("Credenciales encontradas, intentando conectar...");
+  wifiConnect();
+
+  // Verificar si la conexión fue exitosa
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    Serial.println("No se pudo conectar con credenciales guardadas");
+    Serial.println("Las credenciales ya fueron borradas por wifiConnect()");
+    Serial.println("Iniciando portal de configuración WiFi...");
+
+    // Indicador visual: LED rojo parpadeando = error de conexión
+    for (int i = 0; i < 5; i++)
+    {
+      AllLeds(CRGB::Red);
+      delay(150);
+      AllLeds(CRGB::Black);
+      delay(150);
+    }
+
+    startConfigPortal();
+    Serial.println("Portal activo - esperando nueva configuración");
+    return; // No continuar con el setup normal
+  }
+
+  // Si llegamos aquí, estamos conectados exitosamente
+  Serial.println("WiFi conectado correctamente");
+
+  // Indicador visual: LED verde = conexión exitosa
+  AllLeds(CRGB::Green);
+  delay(1000);
+  AllLeds(CRGB::Black);
+
+  Serial.println("setup ok - modo normal");
 }
 
 void loop()
@@ -304,20 +359,56 @@ void loop()
   static bool clockError = false;
   static CHSV randomColor(135, 255, 240);
 
+  // ========== MODO PORTAL DE CONFIGURACIÓN ==========
+  // Si el portal está activo, no ejecutar la lógica normal del reloj
+  if (isConfigPortalActive())
+  {
+    // Animación visual para indicar modo configuración
+    static unsigned long lastBlink = 0;
+    static bool ledState = false;
+
+    if (millis() - lastBlink > 1000) // Parpadeo cada segundo
+    {
+      lastBlink = millis();
+      ledState = !ledState;
+
+      if (ledState)
+        AllLeds(CRGB::Blue); // Azul = modo configuración
+      else
+        AllLeds(CRGB::Black);
+    }
+
+    delay(10); // Pequeña pausa para no saturar el loop
+    return;    // No ejecutar resto del código
+  }
+
+  // ========== MODO NORMAL ==========
+
   // intenta reconectarse cada vez que no este conectado.
   if (WiFi.status() != WL_CONNECTED)
   {
+    Serial.println("WiFi desconectado, intentando reconectar...");
     wifiConnect();
-    // si no se conecta se RESETEA !
+
+    // Si falla la reconexión, activar portal de configuración
+    if (WiFi.status() != WL_CONNECTED)
+    {
+      Serial.println("Reconexión falló, activando portal de configuración");
+      startConfigPortal();
+      return; // El portal manejará todo desde ahora
+    }
   }
 
   // la primera vez y cada 1 hora se sincroniza con el reloj de internet.
-  if (!syncTimeWithNTP())
+  if (!isTimeSet())
   {
-    AllLeds(CRGB::Yellow); // fallo la ponida de hora!
-    delay(2000);
-    AllLeds(CRGB::Black);
-    return;
+    AllLeds(CRGB::Yellow); // se pone en hora...
+    if (!syncTimeWithNTP())
+    {
+      AllLeds(CRGB::Red1); // fallo!
+      delay(2000);
+      return;
+    }
   }
 
   // Actualiza los leds (no son bloqueantes)
