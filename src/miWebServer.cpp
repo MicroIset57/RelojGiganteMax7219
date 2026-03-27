@@ -7,7 +7,7 @@ AsyncWebServer* server = nullptr;
 bool configPortalActive = false;
 
 // Inicia la conexión a las redes WiFi
-void wifiConnect()
+bool wifiConnect()
 {
     String ssid, password;
 
@@ -43,18 +43,9 @@ void wifiConnect()
         if (cont >= maxAttempts)
         {
             Serial.println("\nNo se pudo conectar a la red WiFi después de varios intentos");
-
-            // Si las credenciales venían de EEPROM, borrarlas porque son inválidas
-            if (hasStoredCredentials())
-            {
-                Serial.println("Borrando credenciales inválidas...");
-                clearWiFiCredentials();
-            }
-
-            // NO reiniciar - retornar para que el caller maneje la situación
             Serial.println("Conexión WiFi FALLÓ - se requiere configuración");
             WiFi.disconnect();
-            return;
+            return false;
         }
     }
 
@@ -66,6 +57,8 @@ void wifiConnect()
     Serial.print("RSSI: ");
     Serial.print(WiFi.RSSI());
     Serial.println(" dBm");
+
+    return true;
 }
 
 bool isTimeSet()

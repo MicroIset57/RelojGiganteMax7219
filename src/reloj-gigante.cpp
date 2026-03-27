@@ -56,8 +56,10 @@
 
 MD_MAX72XX mx = MD_MAX72XX(HARDWARE_TYPE, CS_PIN, MAX_DEVICES); // SPI hardware interface
 
-// Enciende un digito con el numero indicado.
-void setNumero(int digito, int num)
+void
+
+    // Enciende un digito con el numero indicado.
+    void setNumero(int digito, int num)
 {
   // mx.clear();
 
@@ -309,23 +311,17 @@ void setup()
       AllLeds(CRGB::Black);
       delay(200);
     }
-
-    startConfigPortal();
-    Serial.println("Portal activo - esperando configuración del usuario");
-    Serial.println("Conectarse a la red WiFi: RelojISet57-Config");
-    Serial.println("Abrir navegador en: http://192.168.4.1");
-    return; // No continuar con el setup normal
+    // solo indico , luego al fallar el wifi abre el AP:
   }
 
-  // Si hay credenciales, intentar conectar
+  // Si hay credenciales o no, intentar conectar (si falla vemos...)
   Serial.println("Credenciales encontradas, intentando conectar...");
   wifiConnect();
 
   // Verificar si la conexión fue exitosa
   if (WiFi.status() != WL_CONNECTED)
   {
-    Serial.println("No se pudo conectar con credenciales guardadas");
-    Serial.println("Las credenciales ya fueron borradas por wifiConnect()");
+    Serial.println("No se pudo conectar al wifi");
     Serial.println("Iniciando portal de configuración WiFi...");
 
     // Indicador visual: LED rojo parpadeando = error de conexión
@@ -366,6 +362,7 @@ void loop()
     // Animación visual para indicar modo configuración
     static unsigned long lastBlink = 0;
     static bool ledState = false;
+    static bool elapsedBeforeReboot = 0;
 
     if (millis() - lastBlink > 1000) // Parpadeo cada segundo
     {
@@ -379,24 +376,34 @@ void loop()
     }
 
     delay(10); // Pequeña pausa para no saturar el loop
-    return;    // No ejecutar resto del código
+
+    elapsedBeforeReboot++;
+    if (elapsedBeforeReboot > 60) // 10*60=600 seg, 10 min de tiempo para que se conecten al AP.
+    {
+      ESP.restart(); // reboot: para que intente wifi otra vez.
+    }
+    return; // No ejecutar resto del código
   }
 
   // ========== MODO NORMAL ==========
 
   // intenta reconectarse cada vez que no este conectado.
+  static int reconnectionAttempts = 0;
   if (WiFi.status() != WL_CONNECTED)
   {
     Serial.println("WiFi desconectado, intentando reconectar...");
-    wifiConnect();
-
-    // Si falla la reconexión, activar portal de configuración
-    if (WiFi.status() != WL_CONNECTED)
+    if (!wifiConnect())
     {
-      Serial.println("Reconexión falló, activando portal de configuración");
-      startConfigPortal();
-      return; // El portal manejará todo desde ahora
+      reconnectionAttempts++;
+      // Si falla la reconexión, activar portal de configuración
+      if (reconnectionAttempts == 5)
+      {
+        Serial.println("Reconexión falló, activando portal de configuración");
+        startConfigPortal();
+      }
+      return;
     }
+    reconnectionAttempts = 0;
   }
 
   // la primera vez y cada 1 hora se sincroniza con el reloj de internet.

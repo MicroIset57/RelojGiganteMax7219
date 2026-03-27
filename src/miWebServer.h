@@ -10,11 +10,11 @@
 
 // Funciones originales
 bool syncTimeWithNTP();
-void wifiConnect();
+bool wifiConnect();
 bool isTimeSet();
 
 // Nuevas funciones para gestión de credenciales WiFi
-void saveWiFiCredentials(const char* ssid, const char* password);
+void saveWiFiCredentials(const char *ssid, const char *password);
 bool loadWiFiCredentials(String &ssid, String &password);
 void clearWiFiCredentials();
 bool hasStoredCredentials();
