@@ -56,10 +56,8 @@
 
 MD_MAX72XX mx = MD_MAX72XX(HARDWARE_TYPE, CS_PIN, MAX_DEVICES); // SPI hardware interface
 
-void
-
-    // Enciende un digito con el numero indicado.
-    void setNumero(int digito, int num)
+// Enciende un digito con el numero indicado.
+void setNumero(int digito, int num)
 {
   // mx.clear();
 
@@ -362,7 +360,7 @@ void loop()
     // Animación visual para indicar modo configuración
     static unsigned long lastBlink = 0;
     static bool ledState = false;
-    static bool elapsedBeforeReboot = 0;
+    static int elapsedBeforeReboot = 0;
 
     if (millis() - lastBlink > 1000) // Parpadeo cada segundo
     {
