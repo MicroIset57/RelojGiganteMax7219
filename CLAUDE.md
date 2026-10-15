@@ -12,7 +12,7 @@ Hardware components:
 - WS2812B RGB LED strip (52 LEDs total: 35 for weekdays + 17 for "ISET 57")
 - WiFi connectivity for NTP time synchronization
 
-**Known Issue**: No RTC with battery backup - time is lost on power failure.
+**Known Issue**: No RTC with battery backup - time is lost on power failure (full power loss). A software reset (`ESP.restart()`/`esp_restart()`) does NOT lose the time, since the last synced time is cached in RTC RAM (`RTC_DATA_ATTR`, which survives soft resets) and restored at boot — see "Time persistence across resets" below.
 
 ## Build & Development Commands
 
@@ -76,8 +76,8 @@ WiFi credentials are in [src/config.h](src/config.h). Edit this file to change S
 - `LedsKitt(...)`: KITT car scanner effect (used in startup test)
 
 **miWebServer.cpp/h** - WiFi and NTP time synchronization
-- `wifiConnect()`: Connects to WiFi (30 second timeout, then calls `esp_restart()`)
-- `syncTimeWithNTP()`: Synchronizes ESP32 time via NTP (runs every hour)
+- `wifiConnect()`: Connects to WiFi, retrying up to 3 times (~10s each). Returns `false` if all 3 fail; the caller (`setup()`/`loop()`) is responsible for starting the config portal (AP) in that case.
+- `syncTimeWithNTP()`: Synchronizes ESP32 time via NTP
   - Uses 3 NTP servers: time.google.com, time.cloudflare.com, ar.pool.ntp.org
   - Timezone: UTC-3 (Argentina)
   - Includes 100ms delay in polling loop to prevent watchdog resets
@@ -87,8 +87,14 @@ WiFi credentials are in [src/config.h](src/config.h). Edit this file to change S
 
 ### Critical Design Details
 
-**NTP Synchronization Caching**:
-The `syncTimeWithNTP()` function caches successful sync timestamp and only re-syncs after 1 hour. The variable `lasTimeAtHourOk` must only be updated AFTER successful sync to prevent premature caching.
+**Time is synced only once per boot, by design**:
+In `loop()`, NTP sync is gated by a local `static bool ntpSynced` flag (not by `isTimeSet()`), and only attempted while `!ntpSynced`. Once `syncTimeWithNTP()` succeeds, it's never called again until the next reset — WiFi disconnects/reconnects afterward do NOT trigger a resync. The ESP32's software clock (`time()`) keeps advancing on its own via the system tick regardless of WiFi state, so once set it stays accurate until the chip reboots. This is intentional: the clock does not need to "re-sync every hour" to stay correct. `syncTimeWithNTP()` still contains internal hourly-cache logic (`lasTimeAtHourOk`) for a periodic-resync use case, but it is currently dead code given the one-shot caller gating.
+
+**Time persistence across resets (RTC RAM)**:
+`syncTimeWithNTP()` saves the last successfully synced time into `rtcLastSyncedTime`, a `RTC_DATA_ATTR time_t` in `miWebServer.cpp`. RTC RAM survives a software reset (`ESP.restart()`/`esp_restart()`) but is cleared on real power loss (no battery backup). `setup()` calls `restoreTimeFromRTC()` first thing, which — if a valid saved time is found — calls `settimeofday()` so the clock shows a reasonable time immediately, before WiFi/NTP is even available. `isTimeSet()` becomes true right away in that case, so the display proceeds normally while `loop()` still attempts one NTP sync in the background (via the `ntpSynced` gate above) to correct whatever time passed during the reset; once that succeeds, `rtcLastSyncedTime` is refreshed and nothing more happens until the next reset.
+
+**Reboot triggers**:
+The only places that call `ESP.restart()`/`esp_restart()` are: the config-portal 10-minute timeout (`reloj-gigante.cpp`), and after successfully saving new WiFi credentials via the `/connect` web endpoint (`miWebServer.cpp`). A transient WiFi drop that reconnects within 3 attempts never reboots and never touches the time at all.
 
 **Watchdog Timer Management**:
 ESP32 has a default ~5 second watchdog. Long-running operations need periodic delays:

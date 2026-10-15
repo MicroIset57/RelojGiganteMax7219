@@ -162,3 +162,24 @@ void SetLed(int ledNum, CRGB col)
     leds[ledNum] = col;
     FastLED.show();
 }
+
+// Modo Access Point: LUN a VIE en verde, con un punto rojo circulando sobre ellos.
+// Los dias ocupan el rango 18..50 (contiguo), salvo el 37 que no se usa (hueco entre Jue y Mie).
+void LedsApMode()
+{
+    static int pos = 18;
+
+    for (int i = 18; i <= 50; i++)
+    {
+        if (i == 37)
+            continue;
+        leds[i] = (i == pos) ? CRGB::Red : CRGB::Green;
+    }
+    FastLED.show();
+
+    do
+    {
+        if (++pos > 50)
+            pos = 18;
+    } while (pos == 37);
+}

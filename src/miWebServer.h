@@ -12,6 +12,7 @@
 bool syncTimeWithNTP();
 bool wifiConnect();
 bool isTimeSet();
+bool restoreTimeFromRTC();
 
 // Nuevas funciones para gestión de credenciales WiFi
 void saveWiFiCredentials(const char *ssid, const char *password);

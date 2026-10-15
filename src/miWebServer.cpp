@@ -1,10 +1,17 @@
 #include "miWebServer.h"
 #include <time.h>
+#include <sys/time.h>
+#include <esp_attr.h>
 
 // Variables globales
 Preferences preferences;
 AsyncWebServer* server = nullptr;
 bool configPortalActive = false;
+
+// Última hora sincronizada por NTP, guardada en RAM del RTC: sobrevive a un
+// reset por software (ESP.restart()/esp_restart()), pero se pierde si se
+// corta la alimentación (no hay RTC con batería de respaldo).
+RTC_DATA_ATTR time_t rtcLastSyncedTime = 0;
 
 // Inicia la conexión a las redes WiFi
 bool wifiConnect()
@@ -28,37 +35,49 @@ bool wifiConnect()
 
     // Configurar modo Station
     WiFi.mode(WIFI_STA);
-    WiFi.begin(ssid.c_str(), password.c_str());
 
-    Serial.print("Conectando a WiFi");
-    int cont = 0;
-    int maxAttempts = 60; // 30 segundos (60 x 500ms)
+    const int maxIntentos = 3;
+    const int maxAttemptsPorIntento = 20; // 10 segundos (20 x 500ms) por intento
 
-    while (WiFi.status() != WL_CONNECTED)
+    for (int intento = 1; intento <= maxIntentos; intento++)
     {
-        delay(500);
-        Serial.print(".");
-        cont++;
+        Serial.print("Conectando a WiFi (intento ");
+        Serial.print(intento);
+        Serial.print("/");
+        Serial.print(maxIntentos);
+        Serial.print(")");
 
-        if (cont >= maxAttempts)
+        WiFi.begin(ssid.c_str(), password.c_str());
+
+        int cont = 0;
+        while (WiFi.status() != WL_CONNECTED && cont < maxAttemptsPorIntento)
         {
-            Serial.println("\nNo se pudo conectar a la red WiFi después de varios intentos");
-            Serial.println("Conexión WiFi FALLÓ - se requiere configuración");
-            WiFi.disconnect();
-            return false;
+            delay(500);
+            Serial.print(".");
+            cont++;
         }
+        Serial.println();
+
+        if (WiFi.status() == WL_CONNECTED)
+        {
+            Serial.println("¡Conectado exitosamente!");
+            Serial.print("SSID: ");
+            Serial.println(WiFi.SSID());
+            Serial.print("IP: ");
+            Serial.println(WiFi.localIP());
+            Serial.print("RSSI: ");
+            Serial.print(WiFi.RSSI());
+            Serial.println(" dBm");
+            return true;
+        }
+
+        WiFi.disconnect();
+        delay(200);
     }
 
-    Serial.println("\n¡Conectado exitosamente!");
-    Serial.print("SSID: ");
-    Serial.println(WiFi.SSID());
-    Serial.print("IP: ");
-    Serial.println(WiFi.localIP());
-    Serial.print("RSSI: ");
-    Serial.print(WiFi.RSSI());
-    Serial.println(" dBm");
-
-    return true;
+    Serial.println("No se pudo conectar a la red WiFi después de 3 intentos");
+    Serial.println("Conexión WiFi FALLÓ - se requiere configuración");
+    return false;
 }
 
 bool isTimeSet()
@@ -98,12 +117,39 @@ bool syncTimeWithNTP()
                 Serial.print("Hora sincronizada: ");
                 Serial.println(buf);
                 lasTimeAtHourOk = millis(); // Actualizar SOLO cuando la sincronización fue exitosa
+                rtcLastSyncedTime = now;    // Guardar en RAM del RTC para sobrevivir a un reset
                 return true;
             }
             delay(100); // Evitar saturar el watchdog durante la espera de NTP
         }
         Serial.println("No se pudo sincronizar la hora (timeout)");
     }
+    return false;
+}
+
+// Restaura la última hora sincronizada guardada en RAM del RTC (si hay una
+// válida) para que el reloj muestre algo razonable inmediatamente después de
+// un reset, sin esperar a que haya WiFi/NTP disponible. Devuelve true si
+// restauró una hora.
+bool restoreTimeFromRTC()
+{
+    if (rtcLastSyncedTime > 1759968000) // mismo criterio que isTimeSet()
+    {
+        struct timeval tv;
+        tv.tv_sec = rtcLastSyncedTime;
+        tv.tv_usec = 0;
+        settimeofday(&tv, nullptr);
+
+        struct tm timeinfo;
+        localtime_r(&rtcLastSyncedTime, &timeinfo);
+        char buf[64];
+        strftime(buf, sizeof(buf), "%c", &timeinfo);
+        Serial.print("Hora restaurada desde RAM del RTC: ");
+        Serial.println(buf);
+        return true;
+    }
+
+    Serial.println("No hay hora guardada en RAM del RTC");
     return false;
 }
 

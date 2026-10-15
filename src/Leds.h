@@ -23,3 +23,4 @@ void ToggleLeds(CRGB col1, uint8_t brillo1, CRGB col2, uint8_t brillo2);
 void updateRainbow();
 void SetLed(int ledNum, CRGB col);
 void Cocoon(CRGB col);
+void LedsApMode();

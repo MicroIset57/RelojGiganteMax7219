@@ -47,6 +47,10 @@
 #define DIG3 0
 #define DIG4 4
 
+// Pulsador para forzar manualmente el portal de configuración WiFi (AP).
+// Cableado: botón entre GPIO22 y GND, usa pull-up interno (presionado = LOW).
+#define BUTTON_AP_PIN 22
+
 // https://arduinoplusplus.wordpress.com/2017/04/14/parola-a-to-z-adapting-for-different-hardware/
 #define HARDWARE_TYPE MD_MAX72XX::PAROLA_HW // PAROLA_HW // GENERIC_HW
 #define MAX_DEVICES 1
@@ -254,6 +258,26 @@ void TestDeMax7219()
   mx.clear();
 }
 
+// Revisa el pulsador de AP manual: si está presionado, fuerza el portal de
+// configuración sin importar el estado actual del WiFi (atajo por si la red
+// conecta pero no tiene internet real, o cualquier otro problema raro).
+void checkBotonAp()
+{
+  static unsigned long lastPress = 0;
+
+  if (digitalRead(BUTTON_AP_PIN) == LOW && (millis() - lastPress) > 300) // debounce simple
+  {
+    lastPress = millis();
+
+    if (!isConfigPortalActive())
+    {
+      Serial.println("Botón AP presionado: forzando portal de configuración manualmente");
+      AllLeds(CRGB::Black);
+      startConfigPortal();
+    }
+  }
+}
+
 void TestDeRgbLeds()
 {
   Serial.println("Test de Leds RGB WS2812B");
@@ -277,6 +301,14 @@ void setup()
   delay(222);
   Serial.println("RESET!\n**Reloj Gigante ISET 57**");
   Serial.println("Version 2.0 - Portal de Configuración WiFi");
+
+  // Restaura la última hora sincronizada (RAM del RTC) para mostrar algo
+  // razonable de inmediato, sin esperar a que haya WiFi/NTP. Mas abajo se
+  // intenta corregir una vez vía NTP (ver loop()).
+  restoreTimeFromRTC();
+
+  // pulsador manual para forzar el AP
+  pinMode(BUTTON_AP_PIN, INPUT_PULLUP);
 
   // inicio MAX7219
   mx.begin();
@@ -353,67 +385,76 @@ void loop()
   static bool clockError = false;
   static CHSV randomColor(135, 255, 240);
 
+  // Chequeo del pulsador manual de AP (funciona siempre, conectado o no)
+  checkBotonAp();
+
   // ========== MODO PORTAL DE CONFIGURACIÓN ==========
   // Si el portal está activo, no ejecutar la lógica normal del reloj
   if (isConfigPortalActive())
   {
-    // Animación visual para indicar modo configuración
-    static unsigned long lastBlink = 0;
-    static bool ledState = false;
+    // Animación visual para indicar modo configuración: LUN-VIE en verde con un rojo circulando
+    static unsigned long lastAnim = 0;
+    static unsigned long lastSecond = 0;
     static int elapsedBeforeReboot = 0;
 
-    if (millis() - lastBlink > 1000) // Parpadeo cada segundo
+    if (millis() - lastAnim > 120)
     {
-      lastBlink = millis();
-      ledState = !ledState;
+      lastAnim = millis();
+      LedsApMode();
+    }
 
-      if (ledState)
-        AllLeds(CRGB::Blue); // Azul = modo configuración
-      else
-        AllLeds(CRGB::Black);
+    if (millis() - lastSecond > 1000) // contador de segundos (independiente de la animación)
+    {
+      lastSecond = millis();
+      elapsedBeforeReboot++;
+      if (elapsedBeforeReboot > 600) // 600 seg = 10 min de tiempo para que se conecten al AP.
+      {
+        ESP.restart(); // reboot: para que intente wifi otra vez.
+      }
     }
 
     delay(10); // Pequeña pausa para no saturar el loop
-
-    elapsedBeforeReboot++;
-    if (elapsedBeforeReboot > 60) // 10*60=600 seg, 10 min de tiempo para que se conecten al AP.
-    {
-      ESP.restart(); // reboot: para que intente wifi otra vez.
-    }
     return; // No ejecutar resto del código
   }
 
   // ========== MODO NORMAL ==========
 
   // intenta reconectarse cada vez que no este conectado.
-  static int reconnectionAttempts = 0;
   if (WiFi.status() != WL_CONNECTED)
   {
     Serial.println("WiFi desconectado, intentando reconectar...");
     if (!wifiConnect())
     {
-      reconnectionAttempts++;
-      // Si falla la reconexión, activar portal de configuración
-      if (reconnectionAttempts == 5)
-      {
-        Serial.println("Reconexión falló, activando portal de configuración");
-        startConfigPortal();
-      }
+      // wifiConnect ya hizo 3 intentos; si fallo, activar portal de configuración
+      Serial.println("Reconexión falló tras 3 intentos, activando portal de configuración");
+      AllLeds(CRGB::Black);
+      startConfigPortal();
       return;
     }
-    reconnectionAttempts = 0;
   }
 
-  // la primera vez y cada 1 hora se sincroniza con el reloj de internet.
-  if (!isTimeSet())
+  // Se sincroniza por NTP una sola vez por arranque, para corregir el tiempo
+  // que pasó apagado/reiniciando (la hora restaurada del RTC es aproximada).
+  // Una vez lograda, no se vuelve a repetir hasta el próximo reset.
+  static bool ntpSynced = false;
+  if (!ntpSynced)
   {
-    AllLeds(CRGB::Yellow); // se pone en hora...
-    if (!syncTimeWithNTP())
+    if (!isTimeSet())
+      AllLeds(CRGB::Yellow); // todavía no tenemos ninguna hora (ni restaurada ni por NTP)
+
+    if (syncTimeWithNTP())
     {
+      ntpSynced = true;
+    }
+    else if (!isTimeSet())
+    {
+      // sin hora restaurada y sin NTP: no hay nada que mostrar todavía.
       AllLeds(CRGB::Red1); // fallo!
       delay(2000);
       return;
     }
+    // si ya teniamos una hora restaurada del RTC, seguimos mostrándola y
+    // reintentamos el NTP en la próxima vuelta del loop.
   }
 
   // Actualiza los leds (no son bloqueantes)
